@@ -1,4 +1,3 @@
-//meta-api-eight.vercel.app/api/v1/accounts
 import axios from "axios";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useState, useEffect } from "react";
@@ -10,7 +9,8 @@ type FormData = {
 };
 
 export default function Form() {
-  const [pages, setPages] = useState([]);
+  const [pages, setPages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true); // Loading state
   const {
     register,
     handleSubmit,
@@ -22,23 +22,26 @@ export default function Form() {
   };
 
   useEffect(() => {
-    axios
-      .post("https://meta-api-eight.vercel.app/api/v1/accounts")
-      .then(function (response) {
-        setPages(response.data.data); // Set pages state with response data
-        console.log(response.data.data); // Log the response data
-        console.log(pages);
-        if (pages.length == 0) {
-          console.log("no value found");
-          setPages([]);
-        }
-      })
-      .catch(function (error) {
-        console.log(error);
-      });
+    const limits = { limit: "10", after: "", before: "" };
+    const getData = async () => {
+      try {
+        const response = await axios.post(
+          "https://meta-api-eight.vercel.app/api/v1/accounts",
+          limits
+        );
+        // Set pages state with response data
+        setPages(response.data.data.data || []);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false); // Set loading to false after data is fetched
+      }
+    };
+    getData();
   }, []);
+
   return (
-    <div className="flex flex-col items-center mt-10  min-h-screen bg-gray-50">
+    <div className="flex flex-col items-center mt-10 min-h-screen bg-gray-50">
       <h2 className="text-3xl font-semibold mb-2">Get in touch</h2>
       <p className="text-gray-500 mb-8">Let us know how we can help.</p>
 
@@ -51,13 +54,17 @@ export default function Form() {
             {...register("Pages", { required: true })}
             className="w-1/3 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {pages?.map((item: any) => {
-              return (
+            {loading ? (
+              <option>Loading...</option> // Show "Loading..." while fetching data
+            ) : pages.length > 0 ? (
+              pages.map((item: any) => (
                 <option key={item.id} value={item.name}>
                   {item.name}
                 </option>
-              );
-            })}
+              ))
+            ) : (
+              <option>No options available</option> // Fallback if no data is available
+            )}
           </select>
           {errors.Pages && (
             <span className="text-red-500">This field is required</span>
@@ -67,7 +74,7 @@ export default function Form() {
               type="datetime-local"
               placeholder="Start"
               {...register("Start", { required: true })}
-              className=" px-4 w-fit py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 w-fit py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.Start && (
               <span className="text-red-500">This field is required</span>
